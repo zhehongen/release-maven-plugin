@@ -1,0 +1,19 @@
+# 运行说明
+
+* 进入程序目录
+
+```shell
+sh run.sh [start|stop|restart|status|log]
+```
+
+> 参数说明
+
+start 启动
+
+stop 停止
+
+restart 重启
+
+status 查看状态
+
+log 查看日志

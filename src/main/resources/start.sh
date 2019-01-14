@@ -34,6 +34,7 @@ GC_LOG_PATH=${APP_HOME}/../logs/gc-${APP_NAME}-${ADATE}.log
 JMX="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=1091 -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false"
 #JVM参数
 JVM_OPTS="-Dname=$APP_NAME -Djeesuite.configcenter.profile=$ENV -Duser.timezone=Asia/Shanghai -Xms512M -Xmx512M -XX:PermSize=256M -XX:MaxPermSize=512M -XX:+HeapDumpOnOutOfMemoryError -XX:+PrintGCDateStamps -Xloggc:$GC_LOG_PATH -XX:+PrintGCDetails -XX:NewRatio=1 -XX:SurvivorRatio=30 -XX:+UseParallelGC -XX:+UseParallelOldGC"
+CONFIG_LOCATION="--spring.config.location=classpath:/application.yaml,classpath:/application-prod.yaml,${APP_HOME}/../config/application-override.yaml"
 
 JAR_FILE=bin/${APP_NAME}.jar
 pid=0
@@ -43,7 +44,7 @@ start(){
   if [[ ! -n "$pid" ]]; then
 #    JAVA_CMD="nohup java -jar $JVM_OPTS $JAR_FILE > $LOG_PATH 2>&1 &"
 #    su - ${RUNNING_USER} -c "$JAVA_CMD"
-    nohup java -jar ${JAR_FILE} > ${LOG_PATH} 2>&1 &
+    nohup java -jar ${JAR_FILE} ${CONFIG_LOCATION} > ${LOG_PATH} 2>&1 &
     echo "---------------------------------"
     echo "启动完成，按CTRL+C退出日志界面即可>>>>>"
     echo "---------------------------------"

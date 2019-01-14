@@ -54,6 +54,7 @@ public class ReleaseMojo extends AbstractMojo {
             copyJar(finalName, targetPath);
             copyShell(targetPath);
             createShell(finalName, targetPath);
+            copyReleaseNote(targetPath);
             zip(finalName, productionPath, targetPath);
         } catch (IOException e) {
             getLog().error(e);
@@ -146,6 +147,20 @@ public class ReleaseMojo extends AbstractMojo {
                 }
             });
 
+        }
+    }
+
+    private void copyReleaseNote(String targetPath) throws IOException {
+        String changelogPath = project.getBasedir() + File.separator + "CHANGELOG";
+        File targetFile = new File(targetPath);
+        File changelogFile = new File(changelogPath);
+
+        FileUtils.copyFileToDirectory(changelogFile, targetFile);
+
+        final InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("README");
+        if (resourceAsStream != null) {
+            File readmeFile = new File(targetFile + File.separator + "README");
+            FileUtils.copyInputStreamToFile(resourceAsStream, readmeFile);
         }
     }
 
