@@ -13,6 +13,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
@@ -31,6 +32,9 @@ public class ReleaseMojo extends AbstractMojo {
      */
     @Parameter(defaultValue = "application-override.yaml")
     private String configFileName;
+
+    @Parameter(defaultValue = "false")
+    private boolean enableCopyConfigToSystem;
 
     /**
      * 打包后输出目录
@@ -73,10 +77,13 @@ public class ReleaseMojo extends AbstractMojo {
         getLog().info("2. 拷贝配置文件");
 
         final String outputDirectory = project.getBuild().getOutputDirectory();
+
         File configFile = new File(outputDirectory + File.separator + configFileName);
         File destDir = new File(targetPath + File.separator + "config");
 
         if (configFile.exists()) { // 项目中存在配置文件
+            getLog().info("\t拷贝" + configFile.getPath());
+
             FileUtils.copyFileToDirectory(configFile, destDir);
         } else {
             final InputStream resourceAsStream = getClass().getClassLoader().getResourceAsStream("application-override.yaml");
@@ -116,14 +123,44 @@ public class ReleaseMojo extends AbstractMojo {
         File shell = new File(targetPath + File.separator + "run.sh");
         boolean rst = shell.setExecutable(true, false);
         String sb = "#!/usr/bin/env bash" + "\n" +
-                "sh bin/start.sh " + finalName + " $1";
+                "ENABLE_COPY_CONFIG_TO_SYSTEM=" + enableCopyConfigToSystem + " \n" +
+                "sh bin/start.sh " + finalName + " ${ENABLE_COPY_CONFIG_TO_SYSTEM} $1";
         FileUtils.write(shell, sb, encoding);
+
+        File bat = new File(targetPath + File.separator + "run.bat");
+        String jarConfig = "classpath:/application.yaml,classpath:/application-dev.yaml,classpath:/application-prod.yaml";
+//        String innerConfig = "config/application-override.yaml," + "config/application-override.properties";
+        String innerConfig = "config/" + configFileName;
+        String configPath = jarConfig + "," + innerConfig;
+
+        String batStr = genBat(finalName, configPath);
+        FileUtils.write(bat, batStr, encoding);
+    }
+
+    private String genBat(String finalName, String configPath) {
+        String lineSeparator= " \r\n ";
+        return " title " + finalName + "\n" +
+                "set ENABLE_COPY_CONFIG_TO_SYSTEM=" + enableCopyConfigToSystem + lineSeparator +
+                "set CONFIG_LOCATION=%ENABLE_COPY_CONFIG_TO_SYSTEM% " + lineSeparator +
+                "if not " + enableCopyConfigToSystem + " goto run " + lineSeparator +
+                "set CURRENT_DIR=%cd% " + lineSeparator +
+                "set APP_NAME=" + finalName + lineSeparator +
+                "set APP_CONFIG_HOME=%userprofile%\\.m2micro" + lineSeparator +
+                "set APP_CONFIG_NAME=" + configFileName + lineSeparator +
+                "set APP_CONFIG_PATH=%APP_CONFIG_HOME%\\%APP_NAME%\\config " + lineSeparator +
+                "if exist %APP_CONFIG_PATH%\\%APP_CONFIG_NAME% goto run " + lineSeparator +
+                "md %APP_CONFIG_PATH% " + lineSeparator +
+                "copy config\\%APP_CONFIG_NAME% %APP_CONFIG_PATH% " + lineSeparator +
+                "set CONFIG_LOCATION=%CONFIG_LOCATION%,%APP_CONFIG_PATH%\\%APP_CONFIG_NAME%" + lineSeparator +
+                ":run " + lineSeparator +
+                "java -jar bin\\" + finalName + ".jar --spring.config.location=%CONFIG_LOCATION%";
+
     }
 
     private void zip(String finalName, String productionPath, String targetPath) throws IOException {
         getLog().info("开始打包程序...");
 
-        String zipFile = productionPath + File.separator + finalName + ".zip";
+        String zipFile = productionPath + File.separator + finalName + "-bin.zip";
         try (OutputStream fos = new FileOutputStream(zipFile);
              OutputStream bos = new BufferedOutputStream(fos);
              final ArchiveOutputStream aos = new ZipArchiveOutputStream(bos)) {
@@ -154,6 +191,12 @@ public class ReleaseMojo extends AbstractMojo {
         String changelogPath = project.getBasedir() + File.separator + "CHANGELOG";
         File targetFile = new File(targetPath);
         File changelogFile = new File(changelogPath);
+
+        if (!changelogFile.exists()) {
+            File changeLogFile = new File(targetFile.getPath() + File.separator + "CHANGELOG");
+            FileUtils.write(changeLogFile, null, Charset.defaultCharset());
+            return;
+        }
 
         FileUtils.copyFileToDirectory(changelogFile, targetFile);
 
