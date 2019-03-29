@@ -139,10 +139,10 @@ public class ReleaseMojo extends AbstractMojo {
 
     private String genBat(String finalName, String configPath) {
         String lineSeparator= " \r\n ";
-        return " title " + finalName + "\n" +
+        return " title " + finalName + lineSeparator +
                 "set ENABLE_COPY_CONFIG_TO_SYSTEM=" + enableCopyConfigToSystem + lineSeparator +
-                "set CONFIG_LOCATION=%ENABLE_COPY_CONFIG_TO_SYSTEM% " + lineSeparator +
-                "if not " + enableCopyConfigToSystem + " goto run " + lineSeparator +
+                "set CONFIG_LOCATION=" + configPath + lineSeparator +
+                "if %ENABLE_COPY_CONFIG_TO_SYSTEM% == " + enableCopyConfigToSystem + " goto run " + lineSeparator +
                 "set CURRENT_DIR=%cd% " + lineSeparator +
                 "set APP_NAME=" + finalName + lineSeparator +
                 "set APP_CONFIG_HOME=%userprofile%\\.m2micro" + lineSeparator +
